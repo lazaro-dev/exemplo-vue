@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>    
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="content">
+        <h2 class="text-center text-white secondary">Disponivel: R&dollar; {{geral}}</h2>
+        <main>
+                <section class="section-form">            
+                    <div class="container-form">
+                        <div class="form-group">
+                            <input type="text" name="" class="input-text" placeholder="Detalhar" v-model="financa.detalhe">
+                            <label for="" class="label-text">Detalhar</label>
+                        </div>
+
+                        <div class="form-group">
+                            <input type="text" name="" class="input-text" placeholder="Valor" v-model="financa.valor">
+                            <label for="" class="label-text">Valor</label>
+                        </div>                        
+                        
+                        <div class="form-group">
+                            <label>Tipo de Lançamento</label>
+                            <div class="inline">
+                                <div class="margin-left">
+                                    <div>
+                                        <input type="radio" name="credebi" id="credito" class="radio-input" value="1" v-model="financa.lancamento_id" >
+                                        <label for="credito" class="text-label">Crédito <span class="span-radio"></span></label>
+                                    </div>
+                                    
+                                    <div>                                           
+                                        <input type="radio" name="credebi" id="Débito" class="radio-input" value="2" v-model="financa.lancamento_id">                                                                                
+                                        <label for="Débito" class="text-label">Débito <span class="span-radio"></span></label>
+                                    </div>
+                                </div>
+                                
+                                <div class="cont-data">
+                                    <label for="">Data</label>
+                                    <input type="date" name="" id="" class="input-data" v-model="financa.data">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group-btn">
+                        <button class="button btn-primary" @click="salvar()">Salvar</button>
+                        <button class="button btn-dark" @click="limpar()">Limpar</button>
+                    </div>                    
+            </section>
+            
+            <section class="section-table">
+                <table class="table">                
+                    <tr>
+                        <th scope="col">Data</th>
+                        <th scope="col">Descrição</th>
+                        <th scope="col">Lançamento</th>
+                        <th scope="col">Valor</th>
+                        <th scope="col">Alterar</th>
+                        <th scope="col">Excluir</th>
+                    </tr>
+                    
+                    <tr v-for="finc in financas">
+                        <td>{{finc.data}}</td>
+                        <th scope="row">{{finc.detalhe}}</th>
+                        <td>{{finc.desc1}}</td>
+                        <td>{{finc.valor}}</td>
+                        <td>
+                            <button class="btn btn-outline-primary" @click="alterar(finc.id)">Alterar</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline-danger" @click="excluir(finc.id)">Excluir</button>
+                        </td>
+                    </tr>                        
+                </table>
+            </section>
+        </main>            
+    </div>
+
+    <script>
+        var app = new Vue({
+           el: "#content",
+           data: {
+               financa: { id: 0, valor: "", lancamento_id: "", desc1: "",  detalhe: "",  data: "" },
+               financas: [],               
+               geral: 0
+           },
+
+           methods: {
+               listar(){
+                   axios.get("./financas.php", { params: {opcao: "read"}})
+                   .then(response => {                       
+                       if(response.data.erro === ""){
+                           this.financas = response.data.financas;
+                       }else{
+                           console.log("Erro ao listar "+ response.data.erro);
+                       }
+                       this.geralFinancas();
+                   })                   
+               },                           
+               geralFinancas(){
+                   this.geral = 0;
+                   this.financas.forEach(finc => {
+                       if(finc.lancamento_id == 1){
+                           this.geral += parseFloat(finc.valor);//credito
+                       }else{
+                           this.geral = this.geral - parseFloat(finc.valor);//debito
+                       }
+                   });
+               }, 
+               salvar(){
+                   let form = new FormData();
+                   
+                   for(let finc in this.financa){
+                       form.append(finc, this.financa[finc]);
+                   }                    
+                   console.log(this.financa)
+                   axios.post("./financas.php", form, { params: { opcao: ( this.financa.id === 0 ) ? "create" : "update" }})
+                   .then(response => {
+                       if(response.data.erro === ""){                                                                                                   
+                           this.listar();
+                           this.geralFinancas();
+                       }else{
+                        console.log("Erro ao tentar salvar "+ response.data.erro);
+                       }             
+                   })
+               },
+               alterar(id){                
+                   this.financa = Object.assign({}, this.financas.filter(finc => finc.id === id)[0]);                   
+               },
+               limpar(){
+                    this.financa = { id: 0, valor: "", lancamento_id: "", desc1: "",  detalhe: "",  data: "" };
+               },
+               excluir(id){                                                            
+                   axios.get("./financas.php", { params: {opcao: "delete", id: id}})
+                   .then(response => {                        
+                       if(response.data.erro !== ""){
+                           console.log("Erro ao tentar deletar "+ response.data.erro);
+                       }
+                      this.listar();
+                      this.geralFinancas();
+                   })                 
+               }            
+           }
+       })
+       
+       app.listar();
+      
+   </script> 
+</body>
+</html>
